@@ -16,34 +16,46 @@ def batch_set_value(sender, app_data, user_data):
 
 
 def get_bit_length(sender, app_data, user_data):
-    s = (dpg.get_item_label(sender).split("##")[1])
-    if dpg.get_value(user_data[f"{s}_input_text"]) != "":
-        dpg.set_value(user_data[f"{s}_pow"], value=int(
-            dpg.get_value(user_data[f"{s}_input_text"]), 16).bit_length())
-    else:
-        dpg.set_value(user_data[f"{s}_pow"], value="")
+    # s = (dpg.get_item_label(sender).split("##")[1])
+    for k, v in user_data.items():
+        if "_input_text" in k:
+            if dpg.get_value(user_data[f"{k[0:-11]}_input_text"]) != "":
+                dpg.set_value(user_data[f"{k[0:-11]}_pow"], value=int(
+                    dpg.get_value(user_data[f"{k[0:-11]}_input_text"]), 16).bit_length())
+            else:
+                dpg.set_value(user_data[f"{k[0:-11]}_pow"], value=0)
+
+def log_warning(sender, app_data, user_data):
+    dpg.configure_item(user_data["log_text"], color=[255, 0, 0])
+    dpg.set_value(user_data["log_text"], value=f"Warning: {app_data}")
 
 
 def add_one_callback(sender, app_data, user_data):
     s = (dpg.get_item_label(sender).split("##")[1])
     s_str = dpg.get_value(user_data[f"{s}_input_text"])
-    result = int(s_str, 16) + 1
-    dpg.set_value(user_data[f"{s}_input_text"],
-                  value=hex(result)[2:].zfill(64).upper())
-    calculate_public_key(result, user_data)
-
+    try:
+        result = int(s_str, 16) + 1
+        dpg.set_value(user_data[f"{s}_input_text"],
+                    value=hex(result)[2:].zfill(64).upper())
+        calculate_public_key(result, user_data)
+    except (RuntimeError, TypeError, NameError) as e:
+        print(e)
+    get_bit_length(sender, app_data, user_data)
 
 def sub_one_callback(sender, app_data, user_data):
     s = (dpg.get_item_label(sender).split("##")[1])
     s_str = dpg.get_value(user_data[f"{s}_input_text"])
-    result = int(s_str, 16) - 1
-    if result > 0:
-        dpg.set_value(user_data[f"{s}_input_text"],
-                      value=hex(result)[2:].zfill(64).upper())
-        calculate_public_key(result, user_data)
-    else:
-        pass
-
+    try:
+        result = int(s_str, 16) - 1
+        if result > 0:
+            dpg.set_value(user_data[f"{s}_input_text"],
+                        value=hex(result)[2:].zfill(64).upper())
+            calculate_public_key(result, user_data)
+        else:
+            pass
+    except (RuntimeError, TypeError, NameError):
+        print("get error")
+    get_bit_length(sender, app_data, user_data)
 
 def drag_pow_callback(sender, app_data, user_data):
     s = (dpg.get_item_label(sender).split("##")[1])
@@ -65,17 +77,20 @@ def g_point_callback(sender, app_data, user_data):
 
 def get_y_coordinate(sender, app_data, user_data):
     s = (dpg.get_item_label(sender).split("##")[1])
-    x = int(dpg.get_value(user_data[f"{s}_x_input_text"]), 16)
-    y, neg_y = ecdsa.get_y_coordinate(x)
-    if ecdsa.is_on_curve((x, y)):
-        dpg.set_value(user_data[f"{s}_y_input_text"],
-                      value=hex(y)[2:].zfill(64).upper())
-        dpg.set_value(user_data[f"{s}_neg_y_input_text"],
-                      value=hex(neg_y)[2:].zfill(64).upper())
-    else:
-        # logger.log_warning("No Point(x,y) on the curve for this x-coordinate.")
-        pass
-
+    try:
+        x = int(dpg.get_value(user_data[f"{s}_x_input_text"]), 16)
+        y, neg_y = ecdsa.get_y_coordinate(x)
+        if ecdsa.is_on_curve((x, y)):
+            dpg.set_value(user_data[f"{s}_y_input_text"],
+                        value=hex(y)[2:].zfill(64).upper())
+            dpg.set_value(user_data[f"{s}_neg_y_input_text"],
+                        value=hex(neg_y)[2:].zfill(64).upper())
+        else:
+            log_warning(None, "No Point(x,y) on the curve for this x-coordinate.", user_data)
+            pass
+    except (RuntimeError, TypeError, NameError):
+        print("get error")
+    get_bit_length(sender, app_data, user_data)
 
 def send_to_memory(sender, app_data, user_data):
     s = (dpg.get_item_label(sender).split("##")[1])
@@ -144,6 +159,7 @@ def calculate_public_key(result, user_data):
                   value=hex(public_key[1])[2:].zfill(64).upper())
     dpg.set_value(user_data["public_neg_y_input_text"],
                   value=hex(neg_y)[2:].zfill(64).upper())
+    get_bit_length(None, None, user_data)
 
 
 def select_type(sender, app_data, user_data):
@@ -185,6 +201,7 @@ def rand_callback(sender, app_data, user_data):
                       value=hex(private_key)[2:].zfill(64).upper())
         batch_set_value(
             [user_data[f"{s}_y_input_text"], user_data[f"{s}_neg_y_input_text"]], "", "")
+    get_bit_length(sender, app_data, user_data)
 
 
 def transposition_callback(sender, app_data, user_data):
@@ -195,6 +212,7 @@ def transposition_callback(sender, app_data, user_data):
         _y, neg_y = neg_y, _y
         dpg.set_value(user_data[f"{s}_y_input_text"], value=_y)
         dpg.set_value(user_data[f"{s}_neg_y_input_text"], value=neg_y)
+    get_bit_length(sender, app_data, user_data)
 
 
 def add_callback(sender, app_data, user_data):
@@ -222,7 +240,7 @@ def add_callback(sender, app_data, user_data):
             dpg.set_value(user_data["public_neg_y_input_text"], value=hex(
                 neg_y)[2:].zfill(64).upper())
         else:
-            # logger.log_warning("error.")
+            log_warning(None, "error.", user_data)
             pass
 
     elif sel_type_a == "Vector" and sel_type_b == "Vector":  # a vector, b vector
@@ -238,7 +256,7 @@ def add_callback(sender, app_data, user_data):
             point_a = (int(A_x, 16), int(A_y, 16))
             point_b = (int(B_x, 16), int(B_y, 16))
             if ecdsa.is_on_curve(point_a) == False or ecdsa.is_on_curve(point_b) == False:
-                # logger.log_warning("point is not on curve.")
+                log_warning(None, "point is not on curve.", user_data)
                 pass
             else:
                 result = ecdsa.point_add(point_a, point_b)
@@ -254,13 +272,14 @@ def add_callback(sender, app_data, user_data):
                     dpg.set_value(user_data["C_neg_y_input_text"], value=hex(
                         neg_y)[2:].zfill(64).upper())
         else:
-            # logger.log_warning("please input point A, B value.")
+            log_warning(None, "please input point A, B value.", user_data)
             pass
     else:
         batch_set_value([user_data["C_x_input_text"], user_data["C_y_input_text"],
                         user_data["C_neg_y_input_text"]], "", "")
-        # logger.log_warning("not support operation.")
+        log_warning(None, "not support operation.", user_data)
         pass
+    get_bit_length(sender, app_data, user_data)
 
 
 def sub_callback(sender, app_data, user_data):
@@ -302,7 +321,7 @@ def sub_callback(sender, app_data, user_data):
             point_a = (int(A_x, 16), int(A_y, 16))
             point_b = (int(B_x, 16), int(B_y, 16))
             if ecdsa.is_on_curve(point_a) == False or ecdsa.is_on_curve(point_b) == False:
-                # logger.log_warning("point is not on curve.")
+                log_warning(None, "point is not on curve.", user_data)
                 pass
             else:
                 result = ecdsa.point_sub(point_a, point_b)
@@ -318,13 +337,14 @@ def sub_callback(sender, app_data, user_data):
                     dpg.set_value(user_data["C_neg_y_input_text"], value=hex(
                         neg_y)[2:].zfill(64).upper())
         else:
-            # logger.log_warning("please input point A, B value.")
+            log_warning(None, "please input point A, B value.", user_data)
             pass
     else:
         batch_set_value([user_data["C_x_input_text"], user_data["C_y_input_text"],
                         user_data["C_neg_y_input_text"]], "", "")
-        # logger.log_warning("not support operation.")
+        log_warning(None, "not support operation.", user_data)
         pass
+    get_bit_length(sender, app_data, user_data)
 
 
 def mul_callback(sender, app_data, user_data):
@@ -356,7 +376,7 @@ def mul_callback(sender, app_data, user_data):
     elif sel_type_a == "Vector" and sel_type_b == "Vector":  # a vector, b vector
         batch_set_value([user_data["C_x_input_text"], user_data["C_y_input_text"],
                         user_data["C_neg_y_input_text"]], "", "")
-        # logger.log_warning("not support operation.")
+        log_warning(None, "not support operation.", user_data)
         pass
     elif sel_type_a == "Scalar" and sel_type_b == "Vector":  # a scalar, b vector:
         A_x = dpg.get_value(user_data["A_x_input_text"])
@@ -364,7 +384,7 @@ def mul_callback(sender, app_data, user_data):
         B_y = dpg.get_value(user_data["B_y_input_text"])
         point_b = (int(B_x, 16), int(B_y, 16))
         if ecdsa.is_on_curve(point_b) == False:
-            # logger.log_warning("point B is not on curve.")
+            log_warning(None, "point B is not on curve.", user_data)
             pass
         elif A_x != "" and B_x != "" and B_y != "":
             result = ecdsa.scalar_multiply(
@@ -386,7 +406,7 @@ def mul_callback(sender, app_data, user_data):
         B_x = dpg.get_value(user_data["B_x_input_text"])
         point_a = (int(A_x, 16), int(A_y, 16))
         if ecdsa.is_on_curve(point_a) == False:
-            # logger.log_warning("point A is not on curve.")
+            log_warning(None, "point A is not on curve.", user_data)
             pass
         elif A_x != "" and A_y != "" and B_x != "":
             result = ecdsa.scalar_multiply(
@@ -403,12 +423,12 @@ def mul_callback(sender, app_data, user_data):
             dpg.set_value(user_data["C_neg_y_input_text"],
                           value=hex(neg_y)[2:].zfill(64).upper())
         else:
-            # logger.log_warning("error.")
+            log_warning(None, "error.", user_data)
             pass
-
+    get_bit_length(sender, app_data, user_data)
 
 def div_callback(sender, app_data, user_data):
-    pass
+    get_bit_length(sender, app_data, user_data)
 
 
 # dpg.create_viewport()

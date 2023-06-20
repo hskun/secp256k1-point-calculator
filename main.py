@@ -12,7 +12,7 @@ def add_app_window():
     with dpg.window(
         label=APP_NAME,
         width=600,
-        height=530,
+        height=550,
         pos=[0, 0],
         no_resize=True,
         no_move=True,
@@ -356,11 +356,19 @@ def add_app_window():
                         label=f"##pow##public_neg_y##{APP_NAME}"
                     )
 
+        with dpg.child_window(width=-1, height=35):
+            with dpg.group(label=f"group_log##{APP_NAME}"):
+                app_id["log_text"] = dpg.add_text(
+                    label=f"##log##{APP_NAME}"
+                )
+
+
     with dpg.window(
         label="Memory",
         width=600,
         height=200,
-        pos=[0, 540],
+        pos=[0, 550],
+        max_size=[600,800],
         no_scrollbar=True,
         no_close=True,
     ) as app_id["memory"]:
