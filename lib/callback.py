@@ -8,7 +8,9 @@ dpg.create_context()
 # dpg.configure_item(21, pos=(0,620), width=600, height=300)
 ecdsa = BitcoinEcdsa.Ecdsa()
 ORDER = 0xFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFEBAAEDCE6AF48A03BBFD25E8CD0364141
-
+p = 0xFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFEFFFFFC2F
+BETA = 0x7ae96a2b657c07106e64479eac3434e99cf0497512f58995c1396c28719501ee
+LAMBDA = 0x5363ad4cc05c30e0a5261c028812645a122e22ea20816678df02967c1b23bd72
 
 def batch_set_value(sender, app_data, user_data):
     for item in sender:
@@ -23,7 +25,7 @@ def get_bit_length(sender, app_data, user_data):
                 dpg.set_value(user_data[f"{k[0:-11]}_pow"], value=int(
                     dpg.get_value(user_data[f"{k[0:-11]}_input_text"]), 16).bit_length())
             else:
-                dpg.set_value(user_data[f"{k[0:-11]}_pow"], value=0)
+                dpg.set_value(user_data[f"{k[0:-11]}_pow"], value='')
 
 def log_warning(sender, app_data, user_data):
     dpg.configure_item(user_data["log_text"], color=[255, 0, 0])
@@ -34,7 +36,8 @@ def add_one_callback(sender, app_data, user_data):
     s = (dpg.get_item_label(sender).split("##")[1])
     s_str = dpg.get_value(user_data[f"{s}_input_text"])
     try:
-        result = int(s_str, 16) + 1
+        # dpg.configure_item(user_data[f"group_public_key"], show=True)
+        result = 1 if s_str=='' else (int(s_str, 16) + 1)
         dpg.set_value(user_data[f"{s}_input_text"],
                     value=hex(result)[2:].zfill(64).upper())
         calculate_public_key(result, user_data)
@@ -46,7 +49,7 @@ def sub_one_callback(sender, app_data, user_data):
     s = (dpg.get_item_label(sender).split("##")[1])
     s_str = dpg.get_value(user_data[f"{s}_input_text"])
     try:
-        result = int(s_str, 16) - 1
+        result = 0 if s_str=='' else (int(s_str, 16) - 1)
         if result > 0:
             dpg.set_value(user_data[f"{s}_input_text"],
                         value=hex(result)[2:].zfill(64).upper())
@@ -63,7 +66,7 @@ def drag_pow_callback(sender, app_data, user_data):
                   value=hex(2 ** dpg.get_value(sender))[2:])
 
 
-def g_point_callback(sender, app_data, user_data):
+def base_point_callback(sender, app_data, user_data):
     s = (dpg.get_item_label(sender).split("##")[1])
     _, public_key = ecdsa.make_keypair(1)
     _, neg_y = (ecdsa.point_neg(public_key))
@@ -101,27 +104,32 @@ def send_to_memory(sender, app_data, user_data):
             dpg.add_text(x_value)
             dpg.add_text(y_value)
 
-        with dpg.group(horizontal=True):
-            dpg.add_button(label="->A", user_data=user_data,
-                           callback=recall_memory)
-            dpg.add_button(label="->B", user_data=user_data,
-                           callback=recall_memory)
-            dpg.add_button(label="X", width=24,
-                           user_data=user_data, callback=delete_slot_memory)
+        with dpg.group(horizontal=False):
+            with dpg.group(horizontal=True):
+                dpg.add_button(label="->A", user_data=user_data,
+                            callback=recall_memory)
+                dpg.add_button(label="->B", user_data=user_data,
+                            callback=recall_memory)
+                dpg.add_button(label="X", width=26,
+                            user_data=user_data, callback=delete_slot_memory)
+            
+            with dpg.group(horizontal=False):
+                dpg.add_input_text(hint="memo", width=100, user_data=user_data)
 
 
 def clear_callback(sender, app_data, user_data):
     s = (dpg.get_item_label(sender).split("##")[1])
     batch_set_value([user_data[f"{s}_x_input_text"], user_data[f"{s}_y_input_text"],
                     user_data[f"{s}_neg_y_input_text"]], "", "")
+    get_bit_length(sender, app_data, user_data)
 
 
 def recall_memory(sender, app_data, user_data):
     sander_label = dpg.get_item_label(sender)
     if sander_label[2] == "A":
         # s = (dpg.get_item_label(sender).split("##")[1])
-        mem_x = dpg.get_value(sender-3)
-        mem_y = dpg.get_value(sender-2)
+        mem_x = dpg.get_value(sender-4)
+        mem_y = dpg.get_value(sender-3)
         if dpg.get_value(user_data[f"{sander_label[2]}_radio_button"]) == "Vector":
             dpg.set_value(user_data["A_x_input_text"], mem_x)
             dpg.set_value(user_data["A_y_input_text"], mem_y)
@@ -129,18 +137,19 @@ def recall_memory(sender, app_data, user_data):
             dpg.set_value(user_data["A_x_input_text"], mem_x)
         dpg.set_value(user_data["A_neg_y_input_text"], "")
     else:
-        mem_x = dpg.get_value(sender-4)
-        mem_y = dpg.get_value(sender-3)
+        mem_x = dpg.get_value(sender-5)
+        mem_y = dpg.get_value(sender-4)
         if dpg.get_value(user_data[f"{sander_label[2]}_radio_button"]) == "Vector":
             dpg.set_value(user_data["B_x_input_text"], mem_x)
             dpg.set_value(user_data["B_y_input_text"], mem_y)
         else:
             dpg.set_value(user_data["B_x_input_text"], mem_x)
         dpg.set_value(user_data["B_neg_y_input_text"], "")
+    get_bit_length(sender, app_data, user_data)
 
 
 def delete_slot_memory(sender, app_data, user_data):
-    for i in range(sender, sender-8, -1):
+    for i in range(sender, sender-9, -1):
         dpg.delete_item(i)
 
 
@@ -165,18 +174,18 @@ def calculate_public_key(result, user_data):
 def select_type(sender, app_data, user_data):
     sel_type = dpg.get_value(sender)
     s = (dpg.get_item_label(sender).split("##")[1])
-    toggle_items = [user_data[f"{s}_g_point_button"], user_data[f"{s}_y_neg_y_button"],
+    toggle_items = [user_data[f"{s}_base_point_button"], user_data[f"{s}_y_neg_y_button"],
                     user_data[f"{s}_y_input_text"], user_data[f"{s}_neg_y_input_text"]]
     if sel_type == "Vector":  # vector
         dpg.configure_item(user_data[f"{s}_drag_int"], enabled=False)
-        dpg.configure_item(user_data[f"group_y_{s}"], show=True)
-        dpg.configure_item(user_data[f"group_neg_y_{s}"], show=True)
+        dpg.configure_item(user_data[f"table_{s}_y"], show=True)
+        dpg.configure_item(user_data[f"table_{s}_neg_y"], show=True)
         for item in toggle_items:
             dpg.configure_item(item, enabled=True)
     if sel_type == "Scalar":  # scalar
         dpg.configure_item(user_data[f"{s}_drag_int"], enabled=True)
-        dpg.configure_item(user_data[f"group_y_{s}"], show=False)
-        dpg.configure_item(user_data[f"group_neg_y_{s}"], show=False)
+        dpg.configure_item(user_data[f"table_{s}_y"], show=False)
+        dpg.configure_item(user_data[f"table_{s}_neg_y"], show=False)
         for item in toggle_items:
             dpg.configure_item(item, enabled=False)
     # batch_set_value([user_data[f"{s}_x_input_text"], user_data[f"{s}_y_input_text"], user_data[f"{s}_neg_y_input_text"]], "", "")
@@ -196,7 +205,7 @@ def rand_callback(sender, app_data, user_data):
                       value=hex(public_key[1])[2:].zfill(64).upper())
         dpg.set_value(user_data[f"{s}_neg_y_input_text"],
                       value=hex(neg_y)[2:].zfill(64).upper())
-    else:
+    else:  # scalar
         dpg.set_value(user_data[f"{s}_x_input_text"],
                       value=hex(private_key)[2:].zfill(64).upper())
         batch_set_value(
