@@ -150,7 +150,7 @@ def add_app_window():
                             dpg.add_text(" X")
                             app_id[f"{i}_x_input_text"] = dpg.add_input_text(
                                 label=f"##{i}_x##{APP_NAME}",
-                                width=-1,
+                                width=460,
                                 hexadecimal=True,
                                 no_spaces=True,
                                 uppercase=True,
